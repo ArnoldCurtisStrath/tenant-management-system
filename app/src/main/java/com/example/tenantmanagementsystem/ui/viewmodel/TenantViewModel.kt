@@ -1,19 +1,22 @@
 package com.example.tenantmanagementsystem.ui.viewmodel
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
+import com.example.tenantmanagementsystem.data.local.TenantDatabase
 import com.example.tenantmanagementsystem.data.model.Tenant
 import com.example.tenantmanagementsystem.data.repository.TenantRepository
+import kotlinx.coroutines.launch
 
-class TenantViewModel : ViewModel() {
+class TenantViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _tenants = MutableLiveData<List<Tenant>>(TenantRepository.tenants.toList())
+    private val repository =
+        TenantRepository(TenantDatabase.getDatabase(application).tenantDao())
 
-    // the screens watch this one, they cannot change it
-    val tenants: LiveData<List<Tenant>> = _tenants
+    val tenants: LiveData<List<Tenant>> = repository.tenants
 
     // map gives us a new LiveData that updates itself when the list changes
     val tenantCountText: LiveData<String> = tenants.map { list ->
@@ -42,8 +45,9 @@ class TenantViewModel : ViewModel() {
 
         val tenant = Tenant(cleanName, cleanPhone, cleanRent)
 
-        TenantRepository.addTenant(tenant)
-        _tenants.value = TenantRepository.tenants.toList()
+        viewModelScope.launch {
+            repository.addTenant(tenant)
+        }
 
         return tenant
     }
